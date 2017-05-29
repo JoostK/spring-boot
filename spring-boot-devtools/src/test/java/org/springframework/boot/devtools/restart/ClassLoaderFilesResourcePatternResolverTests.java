@@ -30,6 +30,7 @@ import org.springframework.boot.devtools.restart.classloader.ClassLoaderFile.Kin
 import org.springframework.boot.devtools.restart.classloader.ClassLoaderFiles;
 import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.DescriptiveResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.mock.web.MockServletContext;
@@ -116,6 +117,19 @@ public class ClassLoaderFilesResourcePatternResolverTests {
 	}
 
 	@Test
+	public void contextIsUsedAsResourceLoaderInNonWebApplication() throws Exception {
+		GenericApplicationContext context = new GenericApplicationContext() {
+			@Override
+			public Resource getResource(String location) {
+				return new DescriptiveResource("Resource " + location);
+			}
+		};
+		this.resolver = new ClassLoaderFilesResourcePatternResolver(context, this.files);
+		Resource resource = this.resolver.getResource("foo.txt");
+		assertThat(resource.getDescription()).isEqualTo("Resource foo.txt");
+	}
+
+	@Test
 	public void customResourceLoaderIsUsedInNonWebApplication() throws Exception {
 		GenericApplicationContext context = new GenericApplicationContext();
 		ResourceLoader resourceLoader = mock(ResourceLoader.class);
@@ -123,6 +137,20 @@ public class ClassLoaderFilesResourcePatternResolverTests {
 		this.resolver = new ClassLoaderFilesResourcePatternResolver(context, this.files);
 		this.resolver.getResource("foo.txt");
 		verify(resourceLoader).getResource("foo.txt");
+	}
+
+	@Test
+	public void contextIsUsedAsResourceLoaderInWebApplication() throws Exception {
+		GenericWebApplicationContext context = new GenericWebApplicationContext(
+				new MockServletContext()) {
+			@Override
+			public Resource getResource(String location) {
+				return new DescriptiveResource("Resource " + location);
+			}
+		};
+		this.resolver = new ClassLoaderFilesResourcePatternResolver(context, this.files);
+		Resource resource = this.resolver.getResource("foo.txt");
+		assertThat(resource.getDescription()).isEqualTo("Resource foo.txt");
 	}
 
 	@Test
